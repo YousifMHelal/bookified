@@ -45,12 +45,19 @@ function useFormField() {
   const itemContext = React.useContext(FormItemContext);
   const { getFieldState, formState } = useFormContext();
 
-  const fieldState = getFieldState(fieldContext.name, formState);
-
-  if (!fieldContext) {
-    throw new Error("useFormField should be used within <FormField>");
+  if (!fieldContext.name) {
+    throw new Error(
+      "useFormField requires FormFieldContext with a valid field name. Make sure useFormField is used within <FormField>.",
+    );
   }
 
+  if (!itemContext.id) {
+    throw new Error(
+      "useFormField requires FormItemContext with a valid item id. Make sure useFormField is used within <FormItem>.",
+    );
+  }
+
+  const fieldState = getFieldState(fieldContext.name, formState);
   const { id } = itemContext;
 
   return {
@@ -74,15 +81,85 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function FormControl({ ...props }: React.ComponentProps<"div">) {
-  const { formItemId, formDescriptionId, formMessageId, error } = useFormField();
+  const { formItemId, formDescriptionId, formMessageId, error } =
+    useFormField();
+
+  const describedBy = !error
+    ? formDescriptionId
+    : `${formDescriptionId} ${formMessageId}`;
+
+  const isFocusableElement = (element: React.ReactElement) => {
+    if (typeof element.type === "string") {
+      if (["input", "textarea", "select", "button"].includes(element.type)) {
+        return true;
+      }
+
+      if ((element.props as { href?: unknown }).href) {
+        return true;
+      }
+    }
+
+    const elementProps = element.props as {
+      tabIndex?: number;
+      contentEditable?: boolean | "true" | "false";
+    };
+
+    if (
+      typeof elementProps.tabIndex === "number" &&
+      elementProps.tabIndex >= 0
+    ) {
+      return true;
+    }
+
+    if (
+      elementProps.contentEditable === true ||
+      elementProps.contentEditable === "true"
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const addA11yAttributes = (
+    children: React.ReactNode,
+    hasPatched: { value: boolean },
+  ): React.ReactNode => {
+    return React.Children.map(children, (child) => {
+      if (!React.isValidElement(child) || hasPatched.value) {
+        return child;
+      }
+
+      if (isFocusableElement(child)) {
+        hasPatched.value = true;
+        return React.cloneElement(child, {
+          "aria-describedby": describedBy,
+          "aria-invalid": Boolean(error),
+        });
+      }
+
+      if (child.props?.children) {
+        const updatedChildren = addA11yAttributes(
+          child.props.children as React.ReactNode,
+          hasPatched,
+        );
+
+        if (updatedChildren !== child.props.children) {
+          return React.cloneElement(child, undefined, updatedChildren);
+        }
+      }
+
+      return child;
+    });
+  };
+
+  const hasPatchedControl = { value: false };
+  const controlChildren = addA11yAttributes(props.children, hasPatchedControl);
 
   return (
-    <div
-      id={formItemId}
-      aria-describedby={!error ? formDescriptionId : `${formDescriptionId} ${formMessageId}`}
-      aria-invalid={Boolean(error)}
-      {...props}
-    />
+    <div id={formItemId} {...props}>
+      {controlChildren}
+    </div>
   );
 }
 

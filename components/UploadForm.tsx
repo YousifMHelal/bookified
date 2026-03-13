@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImageIcon, LoaderCircle, Upload, X } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -13,13 +13,29 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "./ui/form";
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 const VOICE_OPTIONS = {
   male: [
-    { id: "dave", name: "Dave", description: "Young male, British-Essex, casual & conversational" },
-    { id: "daniel", name: "Daniel", description: "Middle-aged male, British, authoritative but warm" },
+    {
+      id: "dave",
+      name: "Dave",
+      description: "Young male, British-Essex, casual & conversational",
+    },
+    {
+      id: "daniel",
+      name: "Daniel",
+      description: "Middle-aged male, British, authoritative but warm",
+    },
     { id: "chris", name: "Chris", description: "Male, casual & easy-going" },
   ],
   female: [
-    { id: "rachel", name: "Rachel", description: "Young female, American, calm & clear" },
-    { id: "sarah", name: "Sarah", description: "Young female, American, soft & approachable" },
+    {
+      id: "rachel",
+      name: "Rachel",
+      description: "Young female, American, calm & clear",
+    },
+    {
+      id: "sarah",
+      name: "Sarah",
+      description: "Young female, American, soft & approachable",
+    },
   ],
 } as const;
 
@@ -27,9 +43,14 @@ const formSchema = z.object({
   pdfFile: z
     .custom<File>((value) => value instanceof File, "Please upload a PDF file")
     .refine((file) => file.size <= MAX_PDF_SIZE, "PDF must be 50MB or smaller")
-    .refine((file) => file.type === "application/pdf", "Only PDF files are allowed"),
+    .refine(
+      (file) => file.type === "application/pdf",
+      "Only PDF files are allowed",
+    ),
   coverImage: z
-    .custom<File | undefined>((value) => value === undefined || value instanceof File)
+    .custom<File | undefined>(
+      (value) => value === undefined || value instanceof File,
+    )
     .refine(
       (file) => !file || file.type.startsWith("image/"),
       "Cover image must be a valid image file",
@@ -47,6 +68,7 @@ type UploadFormValues = z.infer<typeof formSchema>;
 function UploadForm() {
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(formSchema),
@@ -59,9 +81,11 @@ function UploadForm() {
   });
 
   const onSubmit = async (values: UploadFormValues) => {
+    void values;
+    setIsSuccess(false);
     // Placeholder submission flow until backend upload endpoint is connected.
     await new Promise((resolve) => setTimeout(resolve, 1200));
-    console.log("Submitted values:", values);
+    setIsSuccess(true);
   };
 
   const isSubmitting = form.formState.isSubmitting;
@@ -69,7 +93,11 @@ function UploadForm() {
   return (
     <section className="new-book-wrapper">
       {isSubmitting ? (
-        <div className="loading-wrapper" role="status" aria-live="polite" aria-busy>
+        <div
+          className="loading-wrapper"
+          role="status"
+          aria-live="polite"
+          aria-busy>
           <div className="loading-shadow-wrapper bg-white border border-(--border-subtle) shadow-soft-lg">
             <div className="loading-shadow">
               <LoaderCircle className="size-10 text-(--accent-warm) loading-animation" />
@@ -83,13 +111,18 @@ function UploadForm() {
       ) : null}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" noValidate>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-8"
+          noValidate>
           <FormField
             control={form.control}
             name="pdfFile"
             render={({ field }) => (
               <FormItem>
-                <label className="form-label">Book PDF File</label>
+                <label id="pdf-file-label" className="form-label">
+                  Book PDF File
+                </label>
                 <FormControl>
                   <div
                     className={cn(
@@ -98,14 +131,14 @@ function UploadForm() {
                     )}
                     role="button"
                     tabIndex={0}
+                    aria-labelledby="pdf-file-label"
                     onClick={() => pdfInputRef.current?.click()}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         pdfInputRef.current?.click();
                       }
-                    }}
-                  >
+                    }}>
                     <input
                       ref={pdfInputRef}
                       type="file"
@@ -119,7 +152,9 @@ function UploadForm() {
 
                     {field.value ? (
                       <>
-                        <p className="upload-dropzone-text max-w-[85%] truncate">{field.value.name}</p>
+                        <p className="upload-dropzone-text max-w-[85%] truncate">
+                          {field.value.name}
+                        </p>
                         <button
                           type="button"
                           className="upload-dropzone-remove mt-2"
@@ -130,16 +165,19 @@ function UploadForm() {
                               pdfInputRef.current.value = "";
                             }
                           }}
-                          aria-label="Remove PDF file"
-                        >
+                          aria-label="Remove PDF file">
                           <X className="size-4" />
                         </button>
                       </>
                     ) : (
                       <>
                         <Upload className="upload-dropzone-icon" />
-                        <p className="upload-dropzone-text">Click to upload PDF</p>
-                        <p className="upload-dropzone-hint">PDF file (max 50MB)</p>
+                        <p className="upload-dropzone-text">
+                          Click to upload PDF
+                        </p>
+                        <p className="upload-dropzone-hint">
+                          PDF file (max 50MB)
+                        </p>
                       </>
                     )}
                   </div>
@@ -154,7 +192,9 @@ function UploadForm() {
             name="coverImage"
             render={({ field }) => (
               <FormItem>
-                <label className="form-label">Cover Image (Optional)</label>
+                <label id="cover-image-label" className="form-label">
+                  Cover Image (Optional)
+                </label>
                 <FormControl>
                   <div
                     className={cn(
@@ -163,14 +203,14 @@ function UploadForm() {
                     )}
                     role="button"
                     tabIndex={0}
+                    aria-labelledby="cover-image-label"
                     onClick={() => coverInputRef.current?.click()}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         coverInputRef.current?.click();
                       }
-                    }}
-                  >
+                    }}>
                     <input
                       ref={coverInputRef}
                       type="file"
@@ -184,7 +224,9 @@ function UploadForm() {
 
                     {field.value ? (
                       <>
-                        <p className="upload-dropzone-text max-w-[85%] truncate">{field.value.name}</p>
+                        <p className="upload-dropzone-text max-w-[85%] truncate">
+                          {field.value.name}
+                        </p>
                         <button
                           type="button"
                           className="upload-dropzone-remove mt-2"
@@ -195,16 +237,19 @@ function UploadForm() {
                               coverInputRef.current.value = "";
                             }
                           }}
-                          aria-label="Remove cover image"
-                        >
+                          aria-label="Remove cover image">
                           <X className="size-4" />
                         </button>
                       </>
                     ) : (
                       <>
                         <ImageIcon className="upload-dropzone-icon" />
-                        <p className="upload-dropzone-text">Click to upload cover image</p>
-                        <p className="upload-dropzone-hint">Leave empty to auto-generate from PDF</p>
+                        <p className="upload-dropzone-text">
+                          Click to upload cover image
+                        </p>
+                        <p className="upload-dropzone-hint">
+                          Leave empty to auto-generate from PDF
+                        </p>
                       </>
                     )}
                   </div>
@@ -261,12 +306,19 @@ function UploadForm() {
             name="voice"
             render={({ field }) => (
               <FormItem>
-                <label className="form-label">Choose Assistant Voice</label>
                 <FormControl>
-                  <div className="space-y-4">
+                  <fieldset className="space-y-4">
+                    <legend id="voice-choice-legend" className="form-label">
+                      Choose Assistant Voice
+                    </legend>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-[#5e5751]">Male Voices</p>
-                      <div className="voice-selector-options flex-col sm:flex-row">
+                      <p className="text-sm font-medium text-[#5e5751]">
+                        Male Voices
+                      </p>
+                      <div
+                        className="voice-selector-options flex-col sm:flex-row"
+                        role="radiogroup"
+                        aria-labelledby="voice-choice-legend">
                         {VOICE_OPTIONS.male.map((voice) => {
                           const selected = field.value === voice.id;
 
@@ -278,19 +330,23 @@ function UploadForm() {
                                 selected
                                   ? "voice-selector-option-selected"
                                   : "voice-selector-option-default",
-                              )}
-                            >
+                              )}>
                               <input
                                 type="radio"
-                                name="assistant-voice"
+                                name={field.name}
                                 value={voice.id}
                                 checked={selected}
                                 onChange={() => field.onChange(voice.id)}
+                                onBlur={field.onBlur}
                                 className="mt-0.5"
                               />
                               <div>
-                                <p className="font-semibold text-(--text-primary)">{voice.name}</p>
-                                <p className="text-sm text-(--text-secondary)">{voice.description}</p>
+                                <p className="font-semibold text-(--text-primary)">
+                                  {voice.name}
+                                </p>
+                                <p className="text-sm text-(--text-secondary)">
+                                  {voice.description}
+                                </p>
                               </div>
                             </label>
                           );
@@ -299,8 +355,13 @@ function UploadForm() {
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-[#5e5751]">Female Voices</p>
-                      <div className="voice-selector-options flex-col sm:flex-row">
+                      <p className="text-sm font-medium text-[#5e5751]">
+                        Female Voices
+                      </p>
+                      <div
+                        className="voice-selector-options flex-col sm:flex-row"
+                        role="radiogroup"
+                        aria-labelledby="voice-choice-legend">
                         {VOICE_OPTIONS.female.map((voice) => {
                           const selected = field.value === voice.id;
 
@@ -312,26 +373,30 @@ function UploadForm() {
                                 selected
                                   ? "voice-selector-option-selected"
                                   : "voice-selector-option-default",
-                              )}
-                            >
+                              )}>
                               <input
                                 type="radio"
-                                name="assistant-voice"
+                                name={field.name}
                                 value={voice.id}
                                 checked={selected}
                                 onChange={() => field.onChange(voice.id)}
+                                onBlur={field.onBlur}
                                 className="mt-0.5"
                               />
                               <div>
-                                <p className="font-semibold text-(--text-primary)">{voice.name}</p>
-                                <p className="text-sm text-(--text-secondary)">{voice.description}</p>
+                                <p className="font-semibold text-(--text-primary)">
+                                  {voice.name}
+                                </p>
+                                <p className="text-sm text-(--text-secondary)">
+                                  {voice.description}
+                                </p>
                               </div>
                             </label>
                           );
                         })}
                       </div>
                     </div>
-                  </div>
+                  </fieldset>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -341,6 +406,15 @@ function UploadForm() {
           <button type="submit" className="form-btn" disabled={isSubmitting}>
             Begin Synthesis
           </button>
+
+          {isSuccess ? (
+            <p
+              className="text-sm font-medium text-green-700"
+              role="status"
+              aria-live="polite">
+              Your upload request was submitted successfully.
+            </p>
+          ) : null}
         </form>
       </Form>
     </section>
