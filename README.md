@@ -1,5 +1,21 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Environment Variables
+
+Create a `.env.local` file in the project root and define:
+
+```bash
+MONGODB_URI="your mongodb connection string"
+Bookified_READ_WRITE_TOKEN="your vercel blob read-write token"
+MONGODB_DNS_SERVERS="8.8.8.8,1.1.1.1"
+```
+
+Notes:
+
+- If you use MongoDB Atlas, make sure your network can resolve SRV records for `mongodb+srv://` URIs.
+- If SRV DNS is blocked in your environment, use a standard `mongodb://host1,host2,...` URI from Atlas instead of `mongodb+srv://`.
+- If Node DNS cannot resolve SRV while system DNS can, set `MONGODB_DNS_SERVERS` to public resolvers (for example `8.8.8.8,1.1.1.1`).
+
 ## Getting Started
 
 First, run the development server:
@@ -34,3 +50,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Troubleshooting
+
+- `querySrv ECONNREFUSED _mongodb._tcp...`: DNS/SRV lookup failed before MongoDB connection. Verify internet/DNS settings, and consider using a non-SRV Atlas connection string.
+- `onUploadCompleted provided but no callbackUrl could be determined`: local upload token generation included a completion callback without a callback URL. This project now avoids that callback in local token handling unless you explicitly add callback URL support.
+- `The "middleware" file convention is deprecated`: use `proxy.ts` in the project root instead of `middleware.ts`.

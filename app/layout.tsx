@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "sonner";
 
 const ibmPlexSerif = IBM_Plex_Serif({
   variable: "--font-ibm-plex-serif",
@@ -20,7 +21,8 @@ const monaSans = Mona_Sans({
 
 export const metadata: Metadata = {
   title: "Bookified",
-  description: "Transform your book into interactive AI conversation Upload PDFs, and chat with your books using voice.",
+  description:
+    "Transform your book into interactive AI conversation Upload PDFs, and chat with your books using voice.",
 };
 
 export default function RootLayout({
@@ -29,13 +31,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={`${ibmPlexSerif.variable} ${monaSans.variable} relative font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={`${ibmPlexSerif.variable} ${monaSans.variable} relative font-sans antialiased`}>
+        <ClerkProvider>
           <Navbar />
           {children}
-        </body>
-      </html>
-    </ClerkProvider>
+          <Toaster />
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
