@@ -6,7 +6,7 @@ Create a `.env.local` file in the project root and define:
 
 ```bash
 MONGODB_URI="your mongodb connection string"
-Bookified_READ_WRITE_TOKEN="your vercel blob read-write token"
+BOOKIFIED_READ_WRITE_TOKEN="your vercel blob read-write token"
 MONGODB_DNS_SERVERS="8.8.8.8,1.1.1.1"
 ```
 

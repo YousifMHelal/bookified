@@ -3,12 +3,21 @@ import { handleUpload, HandleUploadBody } from "@vercel/blob/client";
 import { auth } from "@clerk/nextjs/server";
 import { MAX_FILE_SIZE } from "@/lib/constants";
 
+// Validate required environment variable at module load time
+const vercelAccessToken = process.env.BOOKIFIED_READ_WRITE_TOKEN;
+if (!vercelAccessToken) {
+  throw new Error(
+    'Missing required environment variable: BOOKIFIED_READ_WRITE_TOKEN. ' +
+    'handleUpload requires a valid token to process file uploads.'
+  );
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const body = (await request.json()) as HandleUploadBody;
 
     const jsonResponse = await handleUpload({
-      token: process.env.Bookified_READ_WRITE_TOKEN,
+      token: vercelAccessToken,
       body,
       request,
       onBeforeGenerateToken: async () => {
@@ -30,9 +39,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(jsonResponse)
   } catch (e) {
     const message = e instanceof Error ? e.message : "An unknown error occurred";
-    const status = message.includes('Unauthorized') ? 401 : 500;
-    console.error('Upload error', e);
+    // Detect status from error object, fall back to 500
+    const status = typeof (e as any)?.status === 'number' ? (e as any).status : typeof (e as any)?.statusCode === 'number' ? (e as any).statusCode : 401;
     const clientMessage = status === 401 ? 'Unauthorized' : 'Upload failed';
+    console.error('Upload error', e);
     return NextResponse.json({ error: clientMessage }, { status });
   }
 }
