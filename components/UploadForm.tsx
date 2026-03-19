@@ -51,6 +51,9 @@ const UploadForm = () => {
 
     setIsSubmitting(true);
 
+    let uploadedPdfBlob: any = null;
+    let uploadedCoverBlob: any = null;
+
     try {
       const existsCheck = await checkBookExists(data.title);
 
@@ -63,11 +66,11 @@ const UploadForm = () => {
       }
 
       if (existsCheck.exists && existsCheck.book) {
-        return toast.info(
+        toast.info(
           `A book with the title "${data.title}" already exists. Please choose a different title or delete the existing book.`,
         );
         form.reset();
-        router.push(`/books/${existsCheck.book.id}`);
+        router.push(`/books/${existsCheck.book._id}`);
         return;
       }
 
@@ -83,7 +86,7 @@ const UploadForm = () => {
         return;
       }
 
-      const uploadedPdfBlob = await upload(fileTitle, pdfFile, {
+      uploadedPdfBlob = await upload(fileTitle, pdfFile, {
         access: "public",
         handleUploadUrl: "/api/upload",
         contentType: "application/pdf",
@@ -92,21 +95,17 @@ const UploadForm = () => {
       let coverUrl: string;
       if (data.coverImage) {
         const coverFile = data.coverImage;
-        const uploadedCoverBlob = await upload(
-          `${fileTitle}-cover.png`,
-          coverFile,
-          {
-            access: "public",
-            handleUploadUrl: "/api/upload",
-            contentType: coverFile.type,
-          },
-        );
+        uploadedCoverBlob = await upload(`${fileTitle}-cover.png`, coverFile, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+          contentType: coverFile.type,
+        });
         coverUrl = uploadedCoverBlob.url;
       } else {
         const response = await fetch(parsePDF.cover);
         const blob = await response.blob();
 
-        const uploadedCoverBlob = await upload(`${fileTitle}-cover.png`, blob, {
+        uploadedCoverBlob = await upload(`${fileTitle}-cover.png`, blob, {
           access: "public",
           handleUploadUrl: "/api/upload",
           contentType: "image/png",
@@ -133,15 +132,26 @@ const UploadForm = () => {
       }
 
       if (book.elreadyExists) {
-        return toast.info(
+        toast.info(
           `A book with the title "${data.title}" already exists. Please choose a different title or delete the existing book.`,
         );
+        return;
       }
+
+      // Preprocess segments to reduce payload
+      const segmentsForSave = parsePDF.content.map(
+        ({ text, segmentIndex, pageNumber, wordCount }) => ({
+          text,
+          segmentIndex,
+          pageNumber,
+          wordCount,
+        }),
+      );
 
       const segments = await saveBookSegments(
         book.data._id,
         userId,
-        parsePDF.content,
+        segmentsForSave,
       );
 
       if (!segments.success) {
@@ -154,6 +164,20 @@ const UploadForm = () => {
       form.reset();
       router.push("/");
     } catch (error) {
+      // Rollback uploaded blobs on error
+      try {
+        if (uploadedPdfBlob?.pathname) {
+          const { del } = await import("@vercel/blob/client");
+          await del(uploadedPdfBlob.url);
+        }
+        if (uploadedCoverBlob?.pathname) {
+          const { del } = await import("@vercel/blob/client");
+          await del(uploadedCoverBlob.url);
+        }
+      } catch (cleanupError) {
+        console.error("Failed to clean up uploaded blobs:", cleanupError);
+      }
+
       console.error("Upload error:", error);
       const message =
         error instanceof Error

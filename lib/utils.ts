@@ -11,13 +11,15 @@ export function cn(...inputs: ClassValue[]) {
 // Serialize Mongoose documents to plain JSON objects (strips ObjectId, Date, etc.)
 export const serializeData = <T>(data: T): T => JSON.parse(JSON.stringify(data));
 
-// Auto generate slug
+// Auto generate slug with Unicode support
 export function generateSlug(text: string): string {
   return text
     .replace(/\.[^/.]+$/, '') // Remove file extension (.pdf, .txt, etc.)
     .toLowerCase() // Convert to lowercase
     .trim() // Remove whitespace from both ends
-    .replace(/[^\w\s-]/g, '') // Remove special characters (keep letters, numbers, spaces, hyphens)
+    .normalize('NFKD') // Unicode normalization to decompose characters
+    .replace(/\p{M}/gu, '') // Remove diacritics (combining marks)
+    .replace(/[^\p{L}\p{N}\p{M}\s-]/gu, '') // Keep letters, numbers, spaces, hyphens
     .replace(/[\s_]+/g, '-') // Replace spaces and underscores with hyphens
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
@@ -85,28 +87,31 @@ export const getVoice = (persona?: string) => {
 
 // Format duration in seconds to MM:SS format
 export const formatDuration = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const total = Math.max(0, Math.floor(seconds));
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
 export async function parsePDFFile(file: File) {
+  const pdfjsLib = await import('pdfjs-dist');
+
+  if (typeof window !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url,
+    ).toString();
+  }
+
+  // Read file as array buffer
+  const arrayBuffer = await file.arrayBuffer();
+
+  // Load PDF document
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  let pdfDocument: any;
+
   try {
-    const pdfjsLib = await import('pdfjs-dist');
-
-    if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.min.mjs',
-        import.meta.url,
-      ).toString();
-    }
-
-    // Read file as array buffer
-    const arrayBuffer = await file.arrayBuffer();
-
-    // Load PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdfDocument = await loadingTask.promise;
+    pdfDocument = await loadingTask.promise;
 
     // Render first page as cover image
     const firstPage = await pdfDocument.getPage(1);
@@ -145,9 +150,6 @@ export async function parsePDFFile(file: File) {
     // Split text into segments for search
     const segments = splitIntoSegments(fullText);
 
-    // Clean up PDF document resources
-    await pdfDocument.destroy();
-
     return {
       content: segments,
       cover: coverDataURL,
@@ -155,5 +157,10 @@ export async function parsePDFFile(file: File) {
   } catch (error) {
     console.error('Error parsing PDF:', error);
     throw new Error(`Failed to parse PDF file: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    // Always clean up PDF document resources
+    if (pdfDocument) {
+      await pdfDocument.destroy();
+    }
   }
 }
