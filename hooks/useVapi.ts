@@ -158,9 +158,11 @@ export function useVapi(book: IBook) {
           if (message.role === 'user') setCurrentUserMessage('');
 
           setMessages((prev) => {
-            const isDupe = prev.some(
-              (m) => m.role === message.role && m.content === message.transcript,
-            );
+            const last = prev[prev.length - 1];
+            const isDupe =
+              !!last &&
+              last.role === message.role &&
+              last.content === message.transcript;
             return isDupe ? prev : [...prev, { role: message.role, content: message.transcript }];
           });
         }
@@ -269,6 +271,17 @@ export function useVapi(book: IBook) {
       });
     } catch (err) {
       console.error('Failed to start call:', err);
+
+      if (sessionIdRef.current) {
+        try {
+          await endVoiceSession(sessionIdRef.current, 0);
+        } catch (rollbackError) {
+          console.error('Failed to rollback voice session after start error:', rollbackError);
+        } finally {
+          sessionIdRef.current = null;
+        }
+      }
+
       setStatus('idle');
       setLimitError('Failed to start voice session. Please try again.');
     }

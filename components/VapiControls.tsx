@@ -32,8 +32,6 @@ const VapiControls = ({ book }: { book: IBook }) => {
       toast.error(limitError);
       if (isBillingError) {
         router.push("/subscriptions");
-      } else {
-        router.push("/");
       }
       clearError();
     }
@@ -85,6 +83,9 @@ const VapiControls = ({ book }: { book: IBook }) => {
               <button
                 onClick={isActive ? stop : start}
                 disabled={status === "connecting"}
+                aria-label={isActive ? "Stop recording" : "Start recording"}
+                aria-pressed={isActive}
+                aria-disabled={status === "connecting"}
                 className={`vapi-mic-btn shadow-md w-15! h-15! z-10 ${isActive ? "vapi-mic-btn-active" : "vapi-mic-btn-inactive"}`}>
                 {isActive ? (
                   <Mic className="size-7 text-white" />

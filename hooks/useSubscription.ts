@@ -1,7 +1,12 @@
 'use client';
 
 import { useAuth, useUser } from "@clerk/nextjs";
-import { PLANS, PLAN_LIMITS, PlanType } from "@/lib/subscription-constants";
+import {
+  PLANS,
+  PLAN_LIMITS,
+  PlanType,
+  resolvePlanFromMetadata,
+} from "@/lib/subscription-constants";
 
 export const useSubscription = () => {
   const { has, isLoaded: isAuthLoaded } = useAuth();
@@ -27,11 +32,11 @@ export const useSubscription = () => {
   }
   // 2. Second Check: Fallback to user public metadata if `has` fails (caching issue)
   else {
-    const metadataPlan = (user?.publicMetadata?.plan || user?.publicMetadata?.billingPlan)?.toString().toLowerCase();
+    const metadataPlan = resolvePlanFromMetadata(user?.publicMetadata);
 
-    if (metadataPlan === 'pro') {
+    if (metadataPlan === PLANS.PRO) {
       plan = PLANS.PRO;
-    } else if (metadataPlan === 'standard') {
+    } else if (metadataPlan === PLANS.STANDARD) {
       plan = PLANS.STANDARD;
     }
   }

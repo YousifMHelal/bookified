@@ -1,27 +1,21 @@
 'use server';
 
-import { CreateBook, TextSegment } from "@/types";
-import { connectToDatabase } from "@/database/mongoose";
-import { escapeRegex, generateSlug, serializeData } from "@/lib/utils";
-import Book from "@/database/models/book.model";
 import BookSegment from "@/database/models/book-segment.model";
+import Book from "@/database/models/book.model";
+import { connectToDatabase } from "@/database/mongoose";
+import {
+  PLAN_LIMITS,
+  PlanType,
+  resolvePlanFromMetadata,
+} from "@/lib/subscription-constants";
+import { escapeRegex, generateSlug, serializeData } from "@/lib/utils";
+import { CreateBook, TextSegment } from "@/types";
 import mongoose from "mongoose";
-import { PLAN_LIMITS, PLANS, PlanType } from "@/lib/subscription-constants";
 
 const getUserPlan = async (): Promise<PlanType> => {
   const { currentUser } = await import("@clerk/nextjs/server");
   const user = await currentUser();
-
-  const metadataPlan = (
-    user?.publicMetadata?.plan ||
-    user?.publicMetadata?.billingPlan
-  )
-    ?.toString()
-    .toLowerCase();
-
-  if (metadataPlan === PLANS.PRO) return PLANS.PRO;
-  if (metadataPlan === PLANS.STANDARD) return PLANS.STANDARD;
-  return PLANS.FREE;
+  return resolvePlanFromMetadata(user?.publicMetadata);
 };
 
 export const getAllBooks = async (search?: string) => {
@@ -96,10 +90,6 @@ export const createBook = async (data: CreateBook) => {
         alreadyExists: true,
       }
     }
-
-    // // Todo: Check subscription limits before creating a book
-    // const { getUserPlan } = await import("@/lib/subscription.server");
-    // const { PLAN_LIMITS } = await import("@/lib/subscription-constants");
 
     const { auth } = await import("@clerk/nextjs/server");
     const { userId } = await auth();
@@ -198,6 +188,14 @@ export const searchBookSegments = async (bookId: string, query: string, limit: n
     await connectToDatabase();
 
     console.log(`Searching for: "${query}" in book ${bookId}`);
+
+    if (!mongoose.Types.ObjectId.isValid(bookId)) {
+      return {
+        success: false,
+        error: 'Invalid book ID format.',
+        data: [],
+      };
+    }
 
     const bookObjectId = new mongoose.Types.ObjectId(bookId);
 

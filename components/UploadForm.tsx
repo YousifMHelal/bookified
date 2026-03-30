@@ -53,6 +53,29 @@ const UploadForm = () => {
     },
   });
 
+  const cleanupUploadedBlobs = async (blobKeys: string[]) => {
+    if (blobKeys.length === 0) return;
+
+    try {
+      const response = await fetch("/api/upload/cleanup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ blobKeys }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          "Failed to cleanup uploaded blobs",
+          await response.text(),
+        );
+      }
+    } catch (cleanupError) {
+      console.error("Cleanup request failed", cleanupError);
+    }
+  };
+
   const onSubmit = async (data: BookUploadFormValues) => {
     if (!userId) {
       return toast.error("Please login to upload books");
@@ -61,6 +84,7 @@ const UploadForm = () => {
     setIsSubmitting(true);
 
     // PostHog -> Track Book Uploads...
+    const uploadedBlobIds: string[] = [];
 
     try {
       const existsCheck = await checkBookExists(data.title);
@@ -89,6 +113,7 @@ const UploadForm = () => {
         handleUploadUrl: "/api/upload",
         contentType: "application/pdf",
       });
+      uploadedBlobIds.push(uploadedPdfBlob.pathname);
 
       let coverUrl: string;
 
@@ -103,6 +128,7 @@ const UploadForm = () => {
             contentType: coverFile.type,
           },
         );
+        uploadedBlobIds.push(uploadedCoverBlob.pathname);
         coverUrl = uploadedCoverBlob.url;
       } else {
         const response = await fetch(parsedPDF.cover);
@@ -113,6 +139,7 @@ const UploadForm = () => {
           handleUploadUrl: "/api/upload",
           contentType: "image/png",
         });
+        uploadedBlobIds.push(uploadedCoverBlob.pathname);
         coverUrl = uploadedCoverBlob.url;
       }
 
@@ -129,6 +156,7 @@ const UploadForm = () => {
 
       if (!book.success) {
         toast.error((book.error as string) || "Failed to create book");
+        await cleanupUploadedBlobs(uploadedBlobIds);
         if (book.isBillingError) {
           router.push("/subscriptions");
         }
@@ -138,6 +166,7 @@ const UploadForm = () => {
       if (book.alreadyExists) {
         toast.info("Book with same title already exists.");
         form.reset();
+        await cleanupUploadedBlobs(uploadedBlobIds);
         router.push(`/books/${book.data.slug}`);
         return;
       }
@@ -149,7 +178,6 @@ const UploadForm = () => {
       );
 
       if (!segments.success) {
-        toast.error("Failed to save book segments");
         throw new Error("Failed to save book segments");
       }
 
@@ -157,6 +185,8 @@ const UploadForm = () => {
       router.push("/");
     } catch (error) {
       console.error(error);
+
+      await cleanupUploadedBlobs(uploadedBlobIds);
 
       toast.error("Failed to upload book. Please try again later.");
     } finally {

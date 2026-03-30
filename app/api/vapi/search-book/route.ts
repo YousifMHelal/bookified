@@ -1,6 +1,17 @@
 import { searchBookSegments } from '@/lib/actions/book.action';
 import { NextResponse } from 'next/server';
 
+const SEARCH_BOOK_SHARED_SECRET =
+  process.env.VAPI_SEARCH_BOOK_SHARED_SECRET || process.env.VAPI_SHARED_SECRET;
+
+function isAuthorizedRequest(request: Request): boolean {
+  if (!SEARCH_BOOK_SHARED_SECRET) {
+    return false;
+  }
+
+  const providedSecret = request.headers.get('x-shared-secret');
+  return providedSecret === SEARCH_BOOK_SHARED_SECRET;
+}
 
 // Helper function to process book search logic
 async function processBookSearch(bookId: unknown, query: unknown) {
@@ -47,14 +58,23 @@ function parseArgs(args: unknown): Record<string, unknown> {
 }
 
 export async function POST(request: Request) {
+  if (!isAuthorizedRequest(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
 
-    console.log('Vapi search-book request:', JSON.stringify(body, null, 2));
+    const toolCallList = body?.message?.toolCallList || body?.message?.toolCalls;
+    console.log('Vapi search-book request metadata:', {
+      timestamp: new Date().toISOString(),
+      hasFunctionCall: !!body?.message?.functionCall,
+      toolCallCount: Array.isArray(toolCallList) ? toolCallList.length : 0,
+      contentLength: request.headers.get('content-length') || 'unknown',
+    });
 
     // Support multiple Vapi formats
     const functionCall = body?.message?.functionCall;
-    const toolCallList = body?.message?.toolCallList || body?.message?.toolCalls;
 
     // Handle single functionCall format
     if (functionCall) {

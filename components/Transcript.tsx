@@ -12,19 +12,40 @@ interface TranscriptProps {
 
 const Transcript = ({ messages, currentMessage, currentUserMessage }: TranscriptProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const isScrollScheduledRef = useRef(false);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
         top: scrollRef.current.scrollHeight,
-        behavior: 'smooth',
+        behavior: "smooth",
       });
     }
   };
 
+  const throttledScrollToBottom = () => {
+    if (isScrollScheduledRef.current) return;
+
+    isScrollScheduledRef.current = true;
+    rafIdRef.current = requestAnimationFrame(() => {
+      isScrollScheduledRef.current = false;
+      scrollToBottom();
+    });
+  };
+
   useEffect(() => {
-    scrollToBottom();
+    throttledScrollToBottom();
   }, [messages, currentMessage, currentUserMessage]);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      isScrollScheduledRef.current = false;
+    };
+  }, []);
 
   const isEmpty = messages.length === 0 && !currentMessage && !currentUserMessage;
 
