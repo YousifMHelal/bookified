@@ -4,48 +4,37 @@ export const PLANS = {
   PRO: 'pro',
 } as const;
 
-export type PlanType = (typeof PLANS)[keyof typeof PLANS];
+export type PlanType = typeof PLANS[keyof typeof PLANS];
 
-export type PlanLimits = {
+export interface PlanLimits {
   maxBooks: number;
-  maxDurationMinutes: number;
-};
+  maxSessionsPerMonth: number;
+  maxDurationPerSession: number; // in minutes
+  hasSessionHistory: boolean;
+}
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   [PLANS.FREE]: {
-    maxBooks: 3,
-    maxDurationMinutes: 30,
+    maxBooks: 1,
+    maxSessionsPerMonth: 5,
+    maxDurationPerSession: 5,
+    hasSessionHistory: false,
   },
   [PLANS.STANDARD]: {
-    maxBooks: 15,
-    maxDurationMinutes: 180,
+    maxBooks: 10,
+    maxSessionsPerMonth: 100,
+    maxDurationPerSession: 15,
+    hasSessionHistory: true,
   },
   [PLANS.PRO]: {
     maxBooks: 100,
-    maxDurationMinutes: 600,
+    maxSessionsPerMonth: Infinity,
+    maxDurationPerSession: 60,
+    hasSessionHistory: true,
   },
-};
-
-type PlanMetadataLike = {
-  plan?: unknown;
-  billingPlan?: unknown;
-};
-
-export const resolvePlanFromMetadata = (
-  metadata?: PlanMetadataLike | null,
-): PlanType => {
-  const metadataPlan = (metadata?.plan || metadata?.billingPlan)
-    ?.toString()
-    .toLowerCase();
-
-  if (metadataPlan === PLANS.PRO) return PLANS.PRO;
-  if (metadataPlan === PLANS.STANDARD) return PLANS.STANDARD;
-  return PLANS.FREE;
 };
 
 export const getCurrentBillingPeriodStart = (): Date => {
   const now = new Date();
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0),
-  );
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 };

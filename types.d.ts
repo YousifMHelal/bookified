@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 import { Control, FieldPath, FieldValues } from 'react-hook-form';
 import { LucideIcon } from 'lucide-react';
 import z from 'zod';
-import { PLANS, PlanType } from "@/lib/subscription-constants";
+import { PlanType } from "@/lib/subscription-constants";
 import { UploadSchema } from '@/lib/zod';
 
 // ============================================
@@ -124,6 +124,7 @@ export interface SessionCheckResult {
   limit: number;
   plan: PlanType;
   maxDurationMinutes: number;
+  maxSessionMinutes: number;
   error?: string;
 }
 
@@ -131,6 +132,7 @@ export interface StartSessionResult {
   success: boolean;
   sessionId?: string;
   maxDurationMinutes?: number;
+  maxSessionMinutes?: number;
   error?: string;
   isBillingError?: boolean;
 }

@@ -3,29 +3,20 @@
 import BookSegment from "@/database/models/book-segment.model";
 import Book from "@/database/models/book.model";
 import { connectToDatabase } from "@/database/mongoose";
-import {
-  PLAN_LIMITS,
-  PlanType,
-  resolvePlanFromMetadata,
-} from "@/lib/subscription-constants";
 import { escapeRegex, generateSlug, serializeData } from "@/lib/utils";
 import { CreateBook, TextSegment } from "@/types";
 import mongoose from "mongoose";
-
-const getUserPlan = async (): Promise<PlanType> => {
-  const { currentUser } = await import("@clerk/nextjs/server");
-  const user = await currentUser();
-  return resolvePlanFromMetadata(user?.publicMetadata);
-};
+import { getUserPlan } from "../subscription/server";
 
 export const getAllBooks = async (search?: string) => {
   try {
     await connectToDatabase();
 
     let query = {};
+    const normalizedSearch = search?.trim();
 
-    if (search) {
-      const escapedSearch = escapeRegex(search);
+    if (normalizedSearch) {
+      const escapedSearch = escapeRegex(normalizedSearch);
       const regex = new RegExp(escapedSearch, 'i');
       query = {
         $or: [
@@ -90,6 +81,8 @@ export const createBook = async (data: CreateBook) => {
         alreadyExists: true,
       }
     }
+
+    const { PLAN_LIMITS } = await import("@/lib/subscription-constants");
 
     const { auth } = await import("@clerk/nextjs/server");
     const { userId } = await auth();
@@ -188,14 +181,6 @@ export const searchBookSegments = async (bookId: string, query: string, limit: n
     await connectToDatabase();
 
     console.log(`Searching for: "${query}" in book ${bookId}`);
-
-    if (!mongoose.Types.ObjectId.isValid(bookId)) {
-      return {
-        success: false,
-        error: 'Invalid book ID format.',
-        data: [],
-      };
-    }
 
     const bookObjectId = new mongoose.Types.ObjectId(bookId);
 

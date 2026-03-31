@@ -1,54 +1,33 @@
-'use server'
+'use server';
 
 import VoiceSession from "@/database/models/voice-session.model";
 import { connectToDatabase } from "@/database/mongoose";
 import { EndSessionResult, StartSessionResult } from "@/types";
-import {
-  getCurrentBillingPeriodStart,
-  PLAN_LIMITS,
-  resolvePlanFromMetadata,
-} from "../subscription-constants";
+import { getUserPlan } from "../subscription/server";
 
-export const startVoiceSession = async (clerkId : string, bookId: string  ): Promise<StartSessionResult> => {
+export const startVoiceSession = async (clerkId: string, bookId: string): Promise<StartSessionResult> => {
   try {
     await connectToDatabase();
 
-    const { currentUser } = await import("@clerk/nextjs/server");
-    const user = await currentUser();
+    // Limits/Plan to see whether a session is allowed.
+    const { PLAN_LIMITS, getCurrentBillingPeriodStart } = await import("@/lib/subscription-constants");
 
-    if (!user || user.id !== clerkId) {
-      return {
-        success: false,
-        error: "Unauthorized",
-      };
-    }
-
-    const plan = resolvePlanFromMetadata(user.publicMetadata);
+    const plan = await getUserPlan();
     const limits = PLAN_LIMITS[plan];
     const billingPeriodStart = getCurrentBillingPeriodStart();
 
-    const usage = await VoiceSession.aggregate([
-      {
-        $match: {
-          clerkId,
-          billingPeriodStart,
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalDurationSeconds: { $sum: "$durationSeconds" },
-        },
-      },
-    ]);
+    const sessionCount = await VoiceSession.countDocuments({
+      clerkId,
+      billingPeriodStart
+    });
 
-    const usedDurationSeconds = usage[0]?.totalDurationSeconds ?? 0;
-    const usedMinutes = usedDurationSeconds / 60;
+    if (sessionCount >= limits.maxSessionsPerMonth) {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/");
 
-    if (usedMinutes >= limits.maxDurationMinutes) {
       return {
         success: false,
-        error: `You have reached your monthly voice limit (${limits.maxDurationMinutes} minutes) for the ${plan} plan. Please upgrade to continue.`,
+        error: `You have reached the monthly session limit for your ${plan} plan (${limits.maxSessionsPerMonth}). Please upgrade for more sessions.`,
         isBillingError: true,
       };
     }
@@ -61,22 +40,14 @@ export const startVoiceSession = async (clerkId : string, bookId: string  ): Pro
       durationSeconds: 0,
     });
 
-    const remainingMinutes = Math.max(
-      0,
-      limits.maxDurationMinutes - Math.ceil(usedMinutes),
-    );
-
     return {
       success: true,
       sessionId: session._id.toString(),
-      maxDurationMinutes: remainingMinutes,
-    };
-  } catch (error) {
-    console.error("Error starting voice session:", error);
-    return {
-      success: false,
-      error: "An unexpected error occurred while starting the session."
+      maxDurationMinutes: limits.maxDurationPerSession,
     }
+  } catch (e) {
+    console.error('Error starting voice session', e);
+    return { success: false, error: 'Failed to start voice session. Please try again later.' }
   }
 }
 

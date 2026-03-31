@@ -141,8 +141,11 @@ export async function parsePDFFile(file: File) {
       const page = await pdfDocument.getPage(pageNum);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
-        .filter((item) => 'str' in item)
-        .map((item) => (item as { str: string }).str)
+        .filter(
+          (item: unknown): item is { str: string } =>
+            typeof item === 'object' && item !== null && 'str' in item,
+        )
+        .map((item: { str: string }) => item.str)
         .join(' ');
       fullText += pageText + '\n';
     }

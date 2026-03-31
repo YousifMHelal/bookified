@@ -32,6 +32,8 @@ const VapiControls = ({ book }: { book: IBook }) => {
       toast.error(limitError);
       if (isBillingError) {
         router.push("/subscriptions");
+      } else {
+        router.push("/");
       }
       clearError();
     }
@@ -73,7 +75,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
               alt={book.title}
               width={120}
               height={180}
-              className="vapi-cover-image w-30! h-auto!"
+              className="vapi-cover-image !w-[120px] !h-auto"
               priority
             />
             <div className="vapi-mic-wrapper relative">
@@ -83,10 +85,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
               <button
                 onClick={isActive ? stop : start}
                 disabled={status === "connecting"}
-                aria-label={isActive ? "Stop recording" : "Start recording"}
-                aria-pressed={isActive}
-                aria-disabled={status === "connecting"}
-                className={`vapi-mic-btn shadow-md w-15! h-15! z-10 ${isActive ? "vapi-mic-btn-active" : "vapi-mic-btn-inactive"}`}>
+                className={`vapi-mic-btn shadow-md !w-[60px] !h-[60px] z-10 ${isActive ? "vapi-mic-btn-active" : "vapi-mic-btn-inactive"}`}>
                 {isActive ? (
                   <Mic className="size-7 text-white" />
                 ) : (
@@ -127,7 +126,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
         </div>
 
         <div className="vapi-transcript-wrapper">
-          <div className="transcript-container min-h-100">
+          <div className="transcript-container min-h-[400px]">
             <Transcript
               messages={messages}
               currentMessage={currentMessage}
