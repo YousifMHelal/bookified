@@ -112,7 +112,6 @@ Create a `.env` file in the root directory and add the following:
 
 ```env
 NODE_ENV='development'
-NEXT_PUBLIC_BASE_URL=
 
 # Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
@@ -123,14 +122,17 @@ NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/
 NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/
 
 # Vercel Blob Storage
-BLOB_READ_WRITE_TOKEN=
+Bookified_READ_WRITE_TOKEN=
 
 # MongoDB
-MONGODB_URI=
+MONGODB_URI=mongodb:
 
 # Vapi (Voice AI)
 NEXT_PUBLIC_VAPI_API_KEY=
-VAPI_SERVER_SECRET=
+NEXT_PUBLIC_ASSISTANT_ID=
+
+
+
 
 ```
 
