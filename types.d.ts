@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 import { Control, FieldPath, FieldValues } from 'react-hook-form';
 import { LucideIcon } from 'lucide-react';
 import z from 'zod';
-import { PLANS, PlanType } from "@/lib/subscription-constants";
+import { PlanType } from "@/lib/subscription-constants";
 import { UploadSchema } from '@/lib/zod';
 
 // ============================================
@@ -42,10 +42,18 @@ export interface IVoiceSession extends Document {
   _id: string;
   clerkId: string;
   bookId: Types.ObjectId;
-  startedAt: Date;
+  status: "pending" | "started" | "cancelled";
+  startedAt?: Date;
   endedAt?: Date;
   durationSeconds: number;
   billingPeriodStart: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IPendingUpload extends Document {
+  clerkId: string;
+  blobKey: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -123,14 +131,14 @@ export interface SessionCheckResult {
   currentCount: number;
   limit: number;
   plan: PlanType;
-  maxDurationMinutes: number;
+  maxSessionMinutes: number;
   error?: string;
 }
 
 export interface StartSessionResult {
   success: boolean;
   sessionId?: string;
-  maxDurationMinutes?: number;
+  maxSessionMinutes?: number;
   error?: string;
   isBillingError?: boolean;
 }

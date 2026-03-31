@@ -4,13 +4,20 @@ import { IVoiceSession } from "@/types";
 const VoiceSessionSchema = new Schema<IVoiceSession>({
   clerkId: { type: String, required: true, index: true },
   bookId: { type: Schema.Types.ObjectId, ref: "Book", required: true },
-  startedAt: { type: Date, required: true, default: Date.now },
+  status: {
+    type: String,
+    enum: ["pending", "started", "cancelled"],
+    required: true,
+    default: "pending",
+    index: true,
+  },
+  startedAt: { type: Date },
   endedAt: { type: Date },
   durationSeconds: { type: Number, required: true, default: 0 },
   billingPeriodStart: { type: Date, required: true, index: true },
 }, { timestamps: true });
 
-VoiceSessionSchema.index({clerkId: 1, billingPeriodStart: 1});
+VoiceSessionSchema.index({ clerkId: 1, billingPeriodStart: 1, status: 1 });
 
 const VoiceSession = models.VoiceSession || model<IVoiceSession>("VoiceSession", VoiceSessionSchema);
 

@@ -2,6 +2,8 @@ import { TextSegment } from '@/types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { DEFAULT_VOICE, voiceOptions } from './constants';
+import { TextItem, TextMarkedContent } from "pdfjs-dist/types/src/display/api";
+
 
 
 export function cn(...inputs: ClassValue[]) {
@@ -141,8 +143,11 @@ export async function parsePDFFile(file: File) {
       const page = await pdfDocument.getPage(pageNum);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
-        .filter((item) => 'str' in item)
-        .map((item) => (item as { str: string }).str)
+        .filter(
+          (item: TextItem | TextMarkedContent): item is TextItem =>
+            'str' in item && typeof item.str === 'string',
+        )
+        .map((item: { str: string }) => item.str)
         .join(' ');
       fullText += pageText + '\n';
     }

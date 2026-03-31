@@ -1,7 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
 
 @custom-variant dark (&:is(.dark *));
 
@@ -77,10 +75,13 @@
   --border-medium: rgba(33, 42, 59, 0.2);
 
   /* Soft Shadows */
-  --shadow-soft-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-soft-sm:
+    0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-soft-md: 0 2px 4px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08);
-  --shadow-soft-lg: 0 4px 12px rgba(0, 0, 0, 0.08), 0 16px 32px rgba(0, 0, 0, 0.12);
+  --shadow-soft-md:
+    0 2px 4px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08);
+  --shadow-soft-lg:
+    0 4px 12px rgba(0, 0, 0, 0.08), 0 16px 32px rgba(0, 0, 0, 0.12);
   --shadow-book: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
 
   /* Base theme colors */
@@ -184,25 +185,25 @@
     @apply px-1 sm:px-3 text-sm sm:text-base font-medium flex items-center cursor-pointer text-[var(--text-primary)];
   }
   .input-reset {
-    @apply h-12 border-none lg:text-lg! shadow-none focus:outline-none focus-visible:ring-0;
+    @apply h-12 border-none lg:!text-lg shadow-none focus:outline-none focus-visible:ring-0;
   }
   .label {
-    @apply text-lg mb-1 font-medium!;
+    @apply text-lg mb-1 !font-medium;
   }
   .auth-wrapper {
     @apply max-w-7xl px-5 mx-auto w-full min-h-screen pt-20 flex flex-col items-center justify-center py-10;
   }
   .auth-shadow {
-    @apply rounded-2xl bg-(--accent-light);
+    @apply rounded-2xl bg-[var(--accent-light)];
   }
   .clerk-subscriptions {
     @apply py-18 min-h-screen max-w-7xl px-5 mx-auto w-full flex flex-col pb-12 items-center container;
   }
   .page-title {
-    @apply text-3xl! font-bold text-center;
+    @apply !text-3xl font-bold text-center;
   }
   .page-description {
-    @apply mt-3! text-center text-lg;
+    @apply !mt-3 text-center text-lg;
   }
   .new-book {
     @apply max-w-7xl px-5 mx-auto w-full space-y-6 py-18 min-h-screen;
@@ -215,7 +216,8 @@
   }
   .form-btn {
     @apply !w-full h-14 rounded-[10px] bg-[#663820] cursor-pointer hover:bg-[#7a4528] text-xl text-white font-bold transition-colors;
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
   }
   .loading-wrapper {
     @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm;
@@ -276,7 +278,8 @@
   /* Button utilities */
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-3 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-bold rounded-[10px] transition-colors;
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center px-6 py-3 bg-white hover:bg-gray-50 text-[var(--text-secondary)] font-medium rounded-[10px] transition-colors;
@@ -402,6 +405,7 @@
   }
   .vapi-cover-image {
     @apply relative w-[130px] h-[195px] sm:w-[162px] sm:h-[240px] rounded-lg object-cover;
+
     box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
   }
   .vapi-mic-wrapper {
@@ -427,7 +431,7 @@
     }
   }
   .vapi-mic-btn-active {
-    @apply bg-white;
+    @apply bg-[#212a3b];
   }
   .vapi-mic-btn-inactive {
     @apply bg-white;
@@ -437,7 +441,8 @@
   }
   .vapi-badge-ai-text {
     @apply text-sm font-medium text-[#212a3b];
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
   }
   .vapi-status-indicator {
     @apply flex items-center gap-2 bg-white px-3 py-2 rounded-[4px];
@@ -451,6 +456,9 @@
   .vapi-status-dot-connecting {
     @apply bg-yellow-500 animate-pulse;
   }
+  .vapi-status-dot-starting {
+    @apply bg-blue-500 animate-pulse;
+  }
   .vapi-status-dot-listening {
     @apply bg-green-500 animate-pulse;
   }
@@ -462,7 +470,8 @@
   }
   .vapi-status-text {
     @apply text-sm font-medium text-[#212a3b];
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-box {
     @apply bg-white rounded-[10px] px-2.5 py-5 min-w-[225px] text-center;
@@ -472,11 +481,13 @@
   }
   .vapi-stat-label {
     @apply text-lg font-medium text-[#212a3b] mb-3;
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-value-lg {
     @apply text-[30px] font-semibold text-black leading-9;
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-value-sm {
     @apply text-sm font-semibold text-[var(--text-primary)] text-center truncate;
@@ -508,24 +519,29 @@
   }
   .library-cta-primary {
     @apply inline-flex items-center justify-center gap-2 bg-white text-[var(--text-primary)] px-5 py-3 rounded-[10px] font-bold text-base md:text-xl transition-all w-full lg:w-fit;
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
 
     &:hover {
       @apply bg-gray-50;
+
       box-shadow: var(--shadow-soft);
     }
   }
   .library-cta-secondary {
     @apply inline-flex items-center gap-2 bg-white text-[var(--text-primary)] px-5 py-3 rounded-[10px] font-bold text-xl transition-all;
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
 
     &:hover {
       @apply bg-gray-50;
+
       box-shadow: var(--shadow-soft);
     }
   }
   .library-steps-card {
     @apply bg-white p-4 rounded-[10px];
+
     list-style: none;
   }
   .library-steps-card div {
@@ -533,6 +549,7 @@
   }
   .library-step-item {
     @apply flex items-start gap-3;
+
     list-style: none;
   }
   .library-step-number {
@@ -620,10 +637,12 @@
   }
   .voice-selector-option {
     @apply flex-1 flex items-center justify-center gap-3 p-4 border border-[var(--border-subtle)] rounded-lg cursor-pointer transition-all;
+
     box-shadow: var(--shadow-soft-sm);
 
     &:hover {
       box-shadow: var(--shadow-soft);
+
       transform: translateY(-2px);
     }
   }
@@ -665,6 +684,7 @@
   }
   .book-card-cover {
     @apply w-auto h-[170px] md:h-[200px] object-cover rounded-lg;
+
     box-shadow: var(--shadow-book);
   }
   .book-card-meta {
@@ -672,7 +692,8 @@
   }
   .book-card-title {
     @apply font-bold text-[#212a3b] line-clamp-1 text-base md:text-xl leading-[22px] md:leading-[30px];
-    font-family: 'IBM Plex Serif', serif;
+
+    font-family: "IBM Plex Serif", serif;
   }
   .book-card-author {
     @apply text-sm md:text-base font-medium text-[#3d485e] line-clamp-1;
@@ -726,10 +747,12 @@
      =========================================== */
   .back-btn-floating {
     @apply fixed top-24 left-6 z-50 size-12 rounded-full bg-white border border-[var(--border-subtle)] flex items-center justify-center transition-all;
+
     box-shadow: var(--shadow-soft);
 
     &:hover {
       box-shadow: var(--shadow-soft-md);
+
       transform: translateY(-2px);
     }
   }
@@ -781,7 +804,9 @@
 
 .cl-formFieldInput:focus {
   border-color: #212a3b !important;
-  box-shadow: var(--shadow-soft), 0 0 0 2px rgba(33, 42, 59, 0.1) !important;
+  box-shadow:
+    var(--shadow-soft),
+    0 0 0 2px rgba(33, 42, 59, 0.1) !important;
 }
 
 /* Clerk Auth Social Buttons with Soft Shadow */
@@ -821,7 +846,7 @@
 }
 
 /* Card styling - with soft shadow */
-.clerk-pricing-table-wrapper [class*='card'],
+.clerk-pricing-table-wrapper [class*="card"],
 .clerk-pricing-table-wrapper > div > div > div {
   position: relative;
   z-index: 1;
@@ -840,50 +865,50 @@
 .cl-drawerRoot .cl-formButtonPrimary,
 .cl-modalContent .cl-formButtonPrimary,
 .cl-checkoutForm .cl-formButtonPrimary,
-[data-clerk-component] button[class*='formButtonPrimary'] {
+[data-clerk-component] button[class*="formButtonPrimary"] {
   color: white !important;
 }
 
 /* Clerk checkout pay button - target primary/solid buttons */
-button[class*='cl-formButtonPrimary'],
-button[class*='cl-button'][data-variant='solid'][data-color='primary'],
-button[class*='cl-button'][data-variant='solid'][data-color='primary'] *,
-.cl-main button[type='submit'][class*='formButtonPrimary'],
-.cl-footer button[class*='formButtonPrimary'] {
+button[class*="cl-formButtonPrimary"],
+button[class*="cl-button"][data-variant="solid"][data-color="primary"],
+button[class*="cl-button"][data-variant="solid"][data-color="primary"] *,
+.cl-main button[type="submit"][class*="formButtonPrimary"],
+.cl-footer button[class*="formButtonPrimary"] {
   color: white !important;
 }
 
 /* Global Clerk portal/overlay PRIMARY button fix */
-[id^='cl-'] button[class*='formButtonPrimary'],
-[class^='cl-'] button[class*='formButtonPrimary'],
-.cl-modalBackdrop ~ div button[class*='formButtonPrimary'] {
+[id^="cl-"] button[class*="formButtonPrimary"],
+[class^="cl-"] button[class*="formButtonPrimary"],
+.cl-modalBackdrop ~ div button[class*="formButtonPrimary"] {
   color: white !important;
 }
 
 /* Force white text on Clerk PRIMARY buttons only (not segmented controls, tabs, etc.) */
-[class*='cl-'] button[class*='formButtonPrimary'],
-[class*='cl-'] button[class*='formButtonPrimary'] *,
-button[class*='cl-formButtonPrimary'],
-button[class*='cl-formButtonPrimary'] * {
+[class*="cl-"] button[class*="formButtonPrimary"],
+[class*="cl-"] button[class*="formButtonPrimary"] *,
+button[class*="cl-formButtonPrimary"],
+button[class*="cl-formButtonPrimary"] * {
   color: white !important;
 }
 
 /* Ensure segmented controls, tabs, and other light buttons have dark text */
 .cl-segmentedControlButton,
 .cl-segmentedControlButton *,
-button[data-variant='unstyled'],
-button[data-variant='unstyled'] *,
-[class*='cl-segmentedControl'] button,
-[class*='cl-segmentedControl'] button *,
+button[data-variant="unstyled"],
+button[data-variant="unstyled"] *,
+[class*="cl-segmentedControl"] button,
+[class*="cl-segmentedControl"] button *,
 .cl-tabButton,
 .cl-tabButton *,
-[role='tablist'] button,
-[role='tablist'] button * {
+[role="tablist"] button,
+[role="tablist"] button * {
   color: #212a3b !important;
 }
 
 /* Card sections have white background */
-.clerk-pricing-table-wrapper [class*='card'] > *,
+.clerk-pricing-table-wrapper [class*="card"] > *,
 .clerk-pricing-table-wrapper > div > div > div > * {
   background-color: white !important;
 }
@@ -912,7 +937,7 @@ button[data-variant='unstyled'] *,
 /* Current plan button - disabled state */
 .clerk-pricing-table-wrapper button:disabled,
 .clerk-pricing-table-wrapper button[disabled],
-.clerk-pricing-table-wrapper button[aria-disabled='true'] {
+.clerk-pricing-table-wrapper button[aria-disabled="true"] {
   background-color: #f3e4c7 !important;
   color: #212a3b !important;
   cursor: default !important;
@@ -922,17 +947,14 @@ button[data-variant='unstyled'] *,
   font-weight: 600 !important;
 }
 
-/* Add accent border to active plan card
-   Note: This uses :first-child which assumes active plan is always first.
-   If Clerk changes the order, this may highlight the wrong card. */
 .cl-pricingTableCard:first-child {
   border: 2px solid #663820 !important;
 }
 
 /* Style the Active badge with better contrast */
 .cl-badge,
-.cl-pricingTableCard [class*='badge'],
-.cl-pricingTableCard span[class*='Badge'] {
+.cl-pricingTableCard [class*="badge"],
+.cl-pricingTableCard span[class*="Badge"] {
   background-color: #663820 !important;
   color: white !important;
   font-weight: 600 !important;
@@ -940,11 +962,8 @@ button[data-variant='unstyled'] *,
   border-radius: 9999px !important;
 }
 
-/* Add "Current Plan" indicator to active plan that doesn't have a button
-   Note: Hardcoded English text - if i18n support is needed, this should be
-   handled in JavaScript with translated strings rendered in the DOM. */
 .cl-pricingTableCard:first-child .cl-pricingTableCardContent::after {
-  content: 'Your Current Plan';
+  content: "Your Current Plan";
   display: block;
   text-align: center;
   padding: 0.75rem 1.5rem;
@@ -954,4 +973,13 @@ button[data-variant='unstyled'] *,
   font-weight: 600;
   border-radius: 0.75rem;
   font-size: 1.125rem;
+}
+
+.clerk-pricing-container {
+  --cl-color-primary: var(--primary);
+  --cl-color-text: var(--foreground);
+  --cl-color-background: var(--background);
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
 }

@@ -3,19 +3,59 @@
 import BookSegment from "@/database/models/book-segment.model";
 import Book from "@/database/models/book.model";
 import { connectToDatabase } from "@/database/mongoose";
-import {
-  PLAN_LIMITS,
-  PlanType,
-  resolvePlanFromMetadata,
-} from "@/lib/subscription-constants";
 import { escapeRegex, generateSlug, serializeData } from "@/lib/utils";
 import { CreateBook, TextSegment } from "@/types";
+import { auth } from "@clerk/nextjs/server";
+import { del } from "@vercel/blob";
 import mongoose from "mongoose";
+import { getUserPlan } from "../subscription/server";
+import PendingUpload from "@/database/models/pending-upload.model";
 
-const getUserPlan = async (): Promise<PlanType> => {
-  const { currentUser } = await import("@clerk/nextjs/server");
-  const user = await currentUser();
-  return resolvePlanFromMetadata(user?.publicMetadata);
+const BLOB_TOKEN = process.env.BOOKIFIED_READ_WRITE_TOKEN;
+
+const deleteBlobs = async (blobKeys: string[]) => {
+  const uniqueBlobKeys = [...new Set(blobKeys.filter((key) => typeof key === 'string' && key.length > 0))];
+
+  if (uniqueBlobKeys.length === 0) {
+    return;
+  }
+
+  if (!BLOB_TOKEN) {
+    throw new Error('Missing required BOOKIFIED_READ_WRITE_TOKEN for blob cleanup.');
+  }
+
+  try {
+    await del(uniqueBlobKeys, { token: BLOB_TOKEN });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to cleanup blobs during rollback: ${message}`);
+  }
+};
+
+export const registerPendingUpload = async (blobKey: string) => {
+  try {
+    await connectToDatabase();
+
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    if (!blobKey || typeof blobKey !== 'string') {
+      return { success: false, error: 'Invalid blob key' };
+    }
+
+    await PendingUpload.findOneAndUpdate(
+      { clerkId: userId, blobKey },
+      { clerkId: userId, blobKey },
+      { upsert: true, new: true },
+    );
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error registering pending upload', e);
+    return { success: false, error: e };
+  }
 };
 
 export const getAllBooks = async (search?: string) => {
@@ -23,9 +63,10 @@ export const getAllBooks = async (search?: string) => {
     await connectToDatabase();
 
     let query = {};
+    const normalizedSearch = search?.trim();
 
-    if (search) {
-      const escapedSearch = escapeRegex(search);
+    if (normalizedSearch) {
+      const escapedSearch = escapeRegex(normalizedSearch);
       const regex = new RegExp(escapedSearch, 'i');
       query = {
         $or: [
@@ -91,7 +132,7 @@ export const createBook = async (data: CreateBook) => {
       }
     }
 
-    const { auth } = await import("@clerk/nextjs/server");
+    const { PLAN_LIMITS } = await import("@/lib/subscription-constants");
     const { userId } = await auth();
 
     if (!userId || userId !== data.clerkId) {
@@ -153,27 +194,152 @@ export const getBookBySlug = async (slug: string) => {
 }
 
 export const saveBookSegments = async (bookId: string, clerkId: string, segments: TextSegment[]) => {
+  return saveBookSegmentsChunk(bookId, clerkId, segments, segments.length);
+}
+
+export const saveBookSegmentsChunk = async (
+  bookId: string,
+  clerkId: string,
+  segments: TextSegment[],
+  totalSegments?: number,
+) => {
   try {
     await connectToDatabase();
 
-    console.log('Saving book segments...');
+    const { userId } = await auth();
+    if (!userId || userId !== clerkId) {
+      return { success: false, error: 'Unauthorized' };
+    }
 
-    const segmentsToInsert = segments.map(({ text, segmentIndex, pageNumber, wordCount }) => ({
-      clerkId, bookId, content: text, segmentIndex, pageNumber, wordCount
+    if (segments.length === 0) {
+      return { success: true, data: { segmentsCreated: 0 } };
+    }
+
+    const bookObjectId = new mongoose.Types.ObjectId(bookId);
+    const ownedBook = await Book.findOne({ _id: bookObjectId, clerkId: userId })
+      .select('_id')
+      .lean();
+
+    if (!ownedBook) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const bulkOperations = segments.map(({ text, segmentIndex, pageNumber, wordCount }) => ({
+      updateOne: {
+        filter: { clerkId: userId, bookId: bookObjectId, segmentIndex },
+        update: {
+          $set: {
+            clerkId: userId,
+            bookId: bookObjectId,
+            content: text,
+            segmentIndex,
+            pageNumber,
+            wordCount,
+          },
+        },
+        upsert: true,
+      },
     }));
 
-    await BookSegment.insertMany(segmentsToInsert);
+    await BookSegment.bulkWrite(bulkOperations, { ordered: false });
 
-    await Book.findByIdAndUpdate(bookId, { totalSegments: segments.length });
+    const finalTotalSegments =
+      typeof totalSegments === 'number'
+        ? totalSegments
+        : await BookSegment.countDocuments({ clerkId: userId, bookId: bookObjectId });
 
-    console.log('Book segments saved successfully.');
+    await Book.findByIdAndUpdate(bookId, { totalSegments: finalTotalSegments });
 
     return {
       success: true,
-      data: { segmentsCreated: segments.length }
+      data: { segmentsCreated: segments.length },
     }
   } catch (e) {
-    console.error('Error saving book segments', e);
+    console.error('Error saving book segments chunk', e);
+
+    return {
+      success: false,
+      error: e,
+    }
+  }
+}
+
+export const rollbackBookCreation = async (
+  bookId: string,
+) => {
+  try {
+    await connectToDatabase();
+
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const book = await Book.findById(bookId).lean();
+    if (!book) {
+      return { success: false, error: 'Book not found for rollback.' };
+    }
+
+    if (book.clerkId !== userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    await BookSegment.deleteMany({ bookId: book._id, clerkId: userId });
+    await PendingUpload.deleteMany({ clerkId: userId, blobKey: { $in: [book.fileBlobKey, book.coverBlobKey].filter(Boolean) } });
+    await Book.findByIdAndDelete(book._id);
+
+    await deleteBlobs([
+      book.fileBlobKey,
+      book.coverBlobKey ?? '',
+    ]);
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error rolling back book creation', e);
+
+    return {
+      success: false,
+      error: e,
+    }
+  }
+}
+
+export const cleanupUploadedBlobs = async (blobKeys: string[]) => {
+  try {
+    await connectToDatabase();
+
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const normalizedBlobKeys = [...new Set(blobKeys.filter((key) => typeof key === 'string' && key.length > 0))];
+
+    if (normalizedBlobKeys.length === 0) {
+      return { success: true };
+    }
+
+    const pendingUploads = await PendingUpload.find({
+      clerkId: userId,
+      blobKey: { $in: normalizedBlobKeys },
+    })
+      .select('blobKey')
+      .lean();
+
+    const verifiedBlobKeys = pendingUploads
+      .map((upload) => upload.blobKey)
+      .filter((key): key is string => typeof key === 'string' && key.length > 0);
+
+    if (verifiedBlobKeys.length !== normalizedBlobKeys.length) {
+      return { success: false, error: 'Unauthorized blob cleanup request.' };
+    }
+
+    await deleteBlobs(verifiedBlobKeys);
+    await PendingUpload.deleteMany({ clerkId: userId, blobKey: { $in: verifiedBlobKeys } });
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error cleaning uploaded blobs', e);
 
     return {
       success: false,
@@ -188,14 +354,6 @@ export const searchBookSegments = async (bookId: string, query: string, limit: n
     await connectToDatabase();
 
     console.log(`Searching for: "${query}" in book ${bookId}`);
-
-    if (!mongoose.Types.ObjectId.isValid(bookId)) {
-      return {
-        success: false,
-        error: 'Invalid book ID format.',
-        data: [],
-      };
-    }
 
     const bookObjectId = new mongoose.Types.ObjectId(bookId);
 
