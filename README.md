@@ -132,11 +132,6 @@ MONGODB_URI=
 NEXT_PUBLIC_VAPI_API_KEY=
 VAPI_SERVER_SECRET=
 
-# Google Gemini (Embeddings)
-GOOGLE_GEMINI_API_KEY=
-
-# ElevenLabs (Voice Personas)
-ELEVENLABS_API_KEY=
 ```
 
 ### 4. Run the Development Server
@@ -157,14 +152,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `BLOB_READ_WRITE_TOKEN` | [vercel.com](https://vercel.com) — Storage tab |
 | `MONGODB_URI` | [mongodb.com](https://www.mongodb.com) — Atlas connection string |
 | `NEXT_PUBLIC_VAPI_API_KEY` / `VAPI_SERVER_SECRET` | [vapi.ai](https://vapi.ai) |
-| `GOOGLE_GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com) |
-| `ELEVENLABS_API_KEY` | [elevenlabs.io](https://elevenlabs.io) |
+
 
 ---
 
 ## 🌐 Live Demo
 
-Check out the live deployment: [spoken-pages.vercel.app](https://spoken-pages.vercel.app)
+Check out the live deployment: [spoken-pages.vercel.app](https://bookified-bay.vercel.app/)
 
 ---
 
