@@ -158,7 +158,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 🌐 Live Demo
 
-Check out the live deployment: [spoken-pages.vercel.app](https://bookified-bay.vercel.app/)
+Check out the live deployment: [Bookified](https://bookified-bay.vercel.app/)
 
 ---
 
