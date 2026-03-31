@@ -3,17 +3,21 @@ import { handleUpload, HandleUploadBody } from "@vercel/blob/client";
 import { auth } from "@clerk/nextjs/server";
 import { MAX_FILE_SIZE } from "@/lib/constants";
 
-// Validate required environment variable at module load time
-const vercelAccessToken = process.env.BOOKIFIED_READ_WRITE_TOKEN;
-if (!vercelAccessToken) {
-  throw new Error(
-    'Missing required environment variable: BOOKIFIED_READ_WRITE_TOKEN. ' +
-    'handleUpload requires a valid token to process file uploads.'
-  );
-}
+const getVercelAccessToken = () => {
+  const token = process.env.BOOKIFIED_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error(
+      'Missing required environment variable: BOOKIFIED_READ_WRITE_TOKEN. ' +
+      'handleUpload requires a valid token to process file uploads.'
+    );
+  }
+
+  return token;
+};
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const vercelAccessToken = getVercelAccessToken();
     const body = (await request.json()) as HandleUploadBody;
 
     const jsonResponse = await handleUpload({

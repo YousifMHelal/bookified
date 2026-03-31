@@ -2,16 +2,18 @@ import { auth } from "@clerk/nextjs/server";
 import { del } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
-// Validate required environment variable at module load time
-const vercelAccessToken = process.env.BOOKIFIED_READ_WRITE_TOKEN;
-if (!vercelAccessToken) {
-  throw new Error(
-    "Missing required environment variable: BOOKIFIED_READ_WRITE_TOKEN.",
-  );
-}
+const getVercelAccessToken = () => {
+  const token = process.env.BOOKIFIED_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error("Missing required environment variable: BOOKIFIED_READ_WRITE_TOKEN.");
+  }
+
+  return token;
+};
 
 export async function POST(request: Request) {
   try {
+    const vercelAccessToken = getVercelAccessToken();
     const { userId } = await auth();
 
     if (!userId) {
