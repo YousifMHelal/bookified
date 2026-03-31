@@ -8,7 +8,7 @@ const SubscriptionsPage = () => {
         Upgrade for more books, more sessions, and longer voice conversations.
       </p>
 
-      <div className="mt-10 w-full clerk-pricing-table-wrapper">
+      <div className="mt-10 w-full clerk-pricing-table-wrapper clerk-pricing-container">
         <Show when="signed-in">
           <PricingTable />
         </Show>
@@ -20,7 +20,9 @@ const SubscriptionsPage = () => {
             </p>
             <div className="mt-5">
               <SignInButton mode="modal">
-                <button className="btn-primary cursor-pointer">Sign in to continue</button>
+                <button className="btn-primary cursor-pointer">
+                  Sign in to continue
+                </button>
               </SignInButton>
             </div>
           </div>

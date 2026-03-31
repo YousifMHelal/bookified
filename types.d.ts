@@ -42,7 +42,8 @@ export interface IVoiceSession extends Document {
   _id: string;
   clerkId: string;
   bookId: Types.ObjectId;
-  startedAt: Date;
+  status: "pending" | "started" | "cancelled";
+  startedAt?: Date;
   endedAt?: Date;
   durationSeconds: number;
   billingPeriodStart: Date;
@@ -123,7 +124,6 @@ export interface SessionCheckResult {
   currentCount: number;
   limit: number;
   plan: PlanType;
-  maxDurationMinutes: number;
   maxSessionMinutes: number;
   error?: string;
 }
@@ -131,7 +131,6 @@ export interface SessionCheckResult {
 export interface StartSessionResult {
   success: boolean;
   sessionId?: string;
-  maxDurationMinutes?: number;
   maxSessionMinutes?: number;
   error?: string;
   isBillingError?: boolean;

@@ -216,6 +216,7 @@
   }
   .form-btn {
     @apply !w-full h-14 rounded-[10px] bg-[#663820] cursor-pointer hover:bg-[#7a4528] text-xl text-white font-bold transition-colors;
+
     font-family: "IBM Plex Serif", serif;
   }
   .loading-wrapper {
@@ -277,6 +278,7 @@
   /* Button utilities */
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-3 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-bold rounded-[10px] transition-colors;
+
     font-family: "IBM Plex Serif", serif;
   }
   .btn-secondary {
@@ -403,6 +405,7 @@
   }
   .vapi-cover-image {
     @apply relative w-[130px] h-[195px] sm:w-[162px] sm:h-[240px] rounded-lg object-cover;
+
     box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
   }
   .vapi-mic-wrapper {
@@ -438,6 +441,7 @@
   }
   .vapi-badge-ai-text {
     @apply text-sm font-medium text-[#212a3b];
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-status-indicator {
@@ -466,6 +470,7 @@
   }
   .vapi-status-text {
     @apply text-sm font-medium text-[#212a3b];
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-box {
@@ -476,10 +481,12 @@
   }
   .vapi-stat-label {
     @apply text-lg font-medium text-[#212a3b] mb-3;
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-value-lg {
     @apply text-[30px] font-semibold text-black leading-9;
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-value-sm {
@@ -512,24 +519,29 @@
   }
   .library-cta-primary {
     @apply inline-flex items-center justify-center gap-2 bg-white text-[var(--text-primary)] px-5 py-3 rounded-[10px] font-bold text-base md:text-xl transition-all w-full lg:w-fit;
+
     font-family: "IBM Plex Serif", serif;
 
     &:hover {
       @apply bg-gray-50;
+
       box-shadow: var(--shadow-soft);
     }
   }
   .library-cta-secondary {
     @apply inline-flex items-center gap-2 bg-white text-[var(--text-primary)] px-5 py-3 rounded-[10px] font-bold text-xl transition-all;
+
     font-family: "IBM Plex Serif", serif;
 
     &:hover {
       @apply bg-gray-50;
+
       box-shadow: var(--shadow-soft);
     }
   }
   .library-steps-card {
     @apply bg-white p-4 rounded-[10px];
+
     list-style: none;
   }
   .library-steps-card div {
@@ -537,6 +549,7 @@
   }
   .library-step-item {
     @apply flex items-start gap-3;
+
     list-style: none;
   }
   .library-step-number {
@@ -624,10 +637,12 @@
   }
   .voice-selector-option {
     @apply flex-1 flex items-center justify-center gap-3 p-4 border border-[var(--border-subtle)] rounded-lg cursor-pointer transition-all;
+
     box-shadow: var(--shadow-soft-sm);
 
     &:hover {
       box-shadow: var(--shadow-soft);
+
       transform: translateY(-2px);
     }
   }
@@ -669,6 +684,7 @@
   }
   .book-card-cover {
     @apply w-auto h-[170px] md:h-[200px] object-cover rounded-lg;
+
     box-shadow: var(--shadow-book);
   }
   .book-card-meta {
@@ -676,6 +692,7 @@
   }
   .book-card-title {
     @apply font-bold text-[#212a3b] line-clamp-1 text-base md:text-xl leading-[22px] md:leading-[30px];
+
     font-family: "IBM Plex Serif", serif;
   }
   .book-card-author {
@@ -730,10 +747,12 @@
      =========================================== */
   .back-btn-floating {
     @apply fixed top-24 left-6 z-50 size-12 rounded-full bg-white border border-[var(--border-subtle)] flex items-center justify-center transition-all;
+
     box-shadow: var(--shadow-soft);
 
     &:hover {
       box-shadow: var(--shadow-soft-md);
+
       transform: translateY(-2px);
     }
   }

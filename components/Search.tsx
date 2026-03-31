@@ -13,8 +13,18 @@ const Search = () => {
   const [query, setQuery] = useState(searchParams.get("query") || "");
 
   useEffect(() => {
+    const queryFromUrl = searchParams.get("query") || "";
+
+    const frame = window.requestAnimationFrame(() => {
+      setQuery((prev) => (prev === queryFromUrl ? prev : queryFromUrl));
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [searchParams]);
+
+  useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(searchParams.toString());
 
       if (query) {
         params.set("query", query);
@@ -22,11 +32,14 @@ const Search = () => {
         params.delete("query");
       }
 
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      const url = params.toString()
+        ? `${pathname}?${params.toString()}`
+        : pathname;
+      router.replace(url, { scroll: false });
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query, pathname, router]);
+  }, [query, pathname, router, searchParams]);
 
   return (
     <div className="library-search-wrapper">

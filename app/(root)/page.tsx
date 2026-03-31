@@ -6,11 +6,17 @@ import { getAllBooks } from "@/lib/actions/book.action";
 const Page = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string }>;
+  searchParams: Promise<{ query?: string | string[] }>;
 }) => {
   const { query } = await searchParams;
+  const normalizedQuery =
+    typeof query === "string"
+      ? query
+      : Array.isArray(query) && typeof query[0] === "string"
+        ? query[0]
+        : undefined;
 
-  const bookResults = await getAllBooks(query);
+  const bookResults = await getAllBooks(normalizedQuery);
   const books = bookResults.success ? (bookResults.data ?? []) : [];
 
   return (

@@ -7,7 +7,12 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { ASSISTANT_ID, DEFAULT_VOICE, VOICE_SETTINGS } from '@/lib/constants';
 import { getVoice } from '@/lib/utils';
 import { IBook, Messages } from '@/types';
-import { endVoiceSession, startVoiceSession } from '@/lib/actions/session.action';
+import {
+  cancelVoiceSession,
+  endVoiceSession,
+  markVoiceSessionStarted,
+  startVoiceSession,
+} from '@/lib/actions/session.action';
 
 export function useLatestRef<T>(value: T) {
   const ref = useRef(value);
@@ -98,8 +103,20 @@ export function useVapi(book: IBook) {
       'call-start': () => {
         isStoppingRef.current = false;
         setStatus('starting'); // AI speaks first, wait for it
+        setMessages([]);
         setCurrentMessage('');
         setCurrentUserMessage('');
+        startDurationTimer();
+
+        if (sessionIdRef.current) {
+          markVoiceSessionStarted(sessionIdRef.current).then((result) => {
+            if (!result.success) {
+              setLimitError(result.error || 'Failed to start voice session. Please try again.');
+              setStatus('idle');
+              getVapi().stop();
+            }
+          });
+        }
       },
 
       'call-end': () => {
@@ -177,9 +194,10 @@ export function useVapi(book: IBook) {
           if (message.role === 'user') setCurrentUserMessage('');
 
           setMessages((prev) => {
-            const isDupe = prev.some(
-              (m) => m.role === message.role && m.content === message.transcript,
-            );
+            const previousMessage = prev[prev.length - 1];
+            const isDupe =
+              previousMessage?.role === message.role &&
+              previousMessage?.content === message.transcript;
             return isDupe ? prev : [...prev, { role: message.role, content: message.transcript }];
           });
         }
@@ -242,7 +260,7 @@ export function useVapi(book: IBook) {
       startTimeRef.current = null;
       hasTimedOutRef.current = false;
     };
-  }, [clearDurationTimer, durationRef, maxDurationRef]);
+  }, [clearDurationTimer, durationRef, maxDurationRef, startDurationTimer]);
 
   const start = useCallback(async () => {
     if (!userId) {
@@ -256,12 +274,9 @@ export function useVapi(book: IBook) {
     hasTimedOutRef.current = false;
     setSessionMaxDurationSeconds(subscriptionMaxDurationSeconds);
 
-    // Start countdown immediately when user taps mic.
-    startDurationTimer();
-
     try {
       // Check session limits and create session record
-      const result = await startVoiceSession(userId, book._id);
+      const result = await startVoiceSession(book._id);
 
       if (!result.success) {
         clearDurationTimer();
@@ -275,8 +290,8 @@ export function useVapi(book: IBook) {
 
       sessionIdRef.current = result.sessionId || null;
 
-      if (result.maxDurationMinutes) {
-        setSessionMaxDurationSeconds(result.maxDurationMinutes * SECONDS_PER_MINUTE);
+      if (result.maxSessionMinutes) {
+        setSessionMaxDurationSeconds(result.maxSessionMinutes * SECONDS_PER_MINUTE);
       }
 
       const firstMessage = `Hey, good to meet you. Quick question before we dive in - have you actually read ${book.title} yet, or are we starting fresh?`;
@@ -300,6 +315,14 @@ export function useVapi(book: IBook) {
       });
     } catch (err) {
       console.error('Failed to start call:', err);
+
+      if (sessionIdRef.current) {
+        cancelVoiceSession(sessionIdRef.current).catch((cancelError) =>
+          console.error('Failed to cancel voice session after start failure:', cancelError),
+        );
+        sessionIdRef.current = null;
+      }
+
       clearDurationTimer();
       startTimeRef.current = null;
       setDuration(0);
@@ -311,7 +334,6 @@ export function useVapi(book: IBook) {
     book.title,
     book.author,
     clearDurationTimer,
-    startDurationTimer,
     subscriptionMaxDurationSeconds,
     voice,
     userId,

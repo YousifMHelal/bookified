@@ -5,8 +5,26 @@ import Book from "@/database/models/book.model";
 import { connectToDatabase } from "@/database/mongoose";
 import { escapeRegex, generateSlug, serializeData } from "@/lib/utils";
 import { CreateBook, TextSegment } from "@/types";
+import { auth } from "@clerk/nextjs/server";
+import { del } from "@vercel/blob";
 import mongoose from "mongoose";
 import { getUserPlan } from "../subscription/server";
+
+const BLOB_TOKEN = process.env.BOOKIFIED_READ_WRITE_TOKEN;
+
+const deleteBlobs = async (blobKeys: string[]) => {
+  const uniqueBlobKeys = [...new Set(blobKeys.filter((key) => typeof key === 'string' && key.length > 0))];
+
+  if (uniqueBlobKeys.length === 0 || !BLOB_TOKEN) {
+    return;
+  }
+
+  try {
+    await del(uniqueBlobKeys, { token: BLOB_TOKEN });
+  } catch (error) {
+    console.error('Failed to cleanup blobs during rollback', error);
+  }
+};
 
 export const getAllBooks = async (search?: string) => {
   try {
@@ -83,8 +101,6 @@ export const createBook = async (data: CreateBook) => {
     }
 
     const { PLAN_LIMITS } = await import("@/lib/subscription-constants");
-
-    const { auth } = await import("@clerk/nextjs/server");
     const { userId } = await auth();
 
     if (!userId || userId !== data.clerkId) {
@@ -146,27 +162,125 @@ export const getBookBySlug = async (slug: string) => {
 }
 
 export const saveBookSegments = async (bookId: string, clerkId: string, segments: TextSegment[]) => {
+  return saveBookSegmentsChunk(bookId, clerkId, segments, segments.length);
+}
+
+export const saveBookSegmentsChunk = async (
+  bookId: string,
+  clerkId: string,
+  segments: TextSegment[],
+  totalSegments?: number,
+) => {
   try {
     await connectToDatabase();
 
-    console.log('Saving book segments...');
+    const { userId } = await auth();
+    if (!userId || userId !== clerkId) {
+      return { success: false, error: 'Unauthorized' };
+    }
 
-    const segmentsToInsert = segments.map(({ text, segmentIndex, pageNumber, wordCount }) => ({
-      clerkId, bookId, content: text, segmentIndex, pageNumber, wordCount
+    if (segments.length === 0) {
+      return { success: true, data: { segmentsCreated: 0 } };
+    }
+
+    const bookObjectId = new mongoose.Types.ObjectId(bookId);
+
+    const bulkOperations = segments.map(({ text, segmentIndex, pageNumber, wordCount }) => ({
+      updateOne: {
+        filter: { clerkId: userId, bookId: bookObjectId, segmentIndex },
+        update: {
+          $set: {
+            clerkId: userId,
+            bookId: bookObjectId,
+            content: text,
+            segmentIndex,
+            pageNumber,
+            wordCount,
+          },
+        },
+        upsert: true,
+      },
     }));
 
-    await BookSegment.insertMany(segmentsToInsert);
+    await BookSegment.bulkWrite(bulkOperations, { ordered: false });
 
-    await Book.findByIdAndUpdate(bookId, { totalSegments: segments.length });
+    const finalTotalSegments =
+      typeof totalSegments === 'number'
+        ? totalSegments
+        : await BookSegment.countDocuments({ clerkId: userId, bookId: bookObjectId });
 
-    console.log('Book segments saved successfully.');
+    await Book.findByIdAndUpdate(bookId, { totalSegments: finalTotalSegments });
 
     return {
       success: true,
-      data: { segmentsCreated: segments.length }
+      data: { segmentsCreated: segments.length },
     }
   } catch (e) {
-    console.error('Error saving book segments', e);
+    console.error('Error saving book segments chunk', e);
+
+    return {
+      success: false,
+      error: e,
+    }
+  }
+}
+
+export const rollbackBookCreation = async (
+  bookId: string,
+  fileBlobKey?: string,
+  coverBlobKey?: string,
+) => {
+  try {
+    await connectToDatabase();
+
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const book = await Book.findById(bookId).lean();
+    if (!book) {
+      await deleteBlobs([fileBlobKey ?? '', coverBlobKey ?? '']);
+      return { success: true };
+    }
+
+    if (book.clerkId !== userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    await BookSegment.deleteMany({ bookId: book._id, clerkId: userId });
+    await Book.findByIdAndDelete(book._id);
+
+    await deleteBlobs([
+      fileBlobKey ?? book.fileBlobKey,
+      coverBlobKey ?? book.coverBlobKey ?? '',
+    ]);
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error rolling back book creation', e);
+
+    return {
+      success: false,
+      error: e,
+    }
+  }
+}
+
+export const cleanupUploadedBlobs = async (blobKeys: string[]) => {
+  try {
+    await connectToDatabase();
+
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    await deleteBlobs(blobKeys);
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error cleaning uploaded blobs', e);
 
     return {
       success: false,
