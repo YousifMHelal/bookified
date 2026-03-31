@@ -9,20 +9,52 @@ import { auth } from "@clerk/nextjs/server";
 import { del } from "@vercel/blob";
 import mongoose from "mongoose";
 import { getUserPlan } from "../subscription/server";
+import PendingUpload from "@/database/models/pending-upload.model";
 
 const BLOB_TOKEN = process.env.BOOKIFIED_READ_WRITE_TOKEN;
 
 const deleteBlobs = async (blobKeys: string[]) => {
   const uniqueBlobKeys = [...new Set(blobKeys.filter((key) => typeof key === 'string' && key.length > 0))];
 
-  if (uniqueBlobKeys.length === 0 || !BLOB_TOKEN) {
+  if (uniqueBlobKeys.length === 0) {
     return;
+  }
+
+  if (!BLOB_TOKEN) {
+    throw new Error('Missing required BOOKIFIED_READ_WRITE_TOKEN for blob cleanup.');
   }
 
   try {
     await del(uniqueBlobKeys, { token: BLOB_TOKEN });
   } catch (error) {
-    console.error('Failed to cleanup blobs during rollback', error);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to cleanup blobs during rollback: ${message}`);
+  }
+};
+
+export const registerPendingUpload = async (blobKey: string) => {
+  try {
+    await connectToDatabase();
+
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    if (!blobKey || typeof blobKey !== 'string') {
+      return { success: false, error: 'Invalid blob key' };
+    }
+
+    await PendingUpload.findOneAndUpdate(
+      { clerkId: userId, blobKey },
+      { clerkId: userId, blobKey },
+      { upsert: true, new: true },
+    );
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error registering pending upload', e);
+    return { success: false, error: e };
   }
 };
 
@@ -184,6 +216,13 @@ export const saveBookSegmentsChunk = async (
     }
 
     const bookObjectId = new mongoose.Types.ObjectId(bookId);
+    const ownedBook = await Book.findOne({ _id: bookObjectId, clerkId: userId })
+      .select('_id')
+      .lean();
+
+    if (!ownedBook) {
+      return { success: false, error: 'Unauthorized' };
+    }
 
     const bulkOperations = segments.map(({ text, segmentIndex, pageNumber, wordCount }) => ({
       updateOne: {
@@ -227,8 +266,6 @@ export const saveBookSegmentsChunk = async (
 
 export const rollbackBookCreation = async (
   bookId: string,
-  fileBlobKey?: string,
-  coverBlobKey?: string,
 ) => {
   try {
     await connectToDatabase();
@@ -240,8 +277,7 @@ export const rollbackBookCreation = async (
 
     const book = await Book.findById(bookId).lean();
     if (!book) {
-      await deleteBlobs([fileBlobKey ?? '', coverBlobKey ?? '']);
-      return { success: true };
+      return { success: false, error: 'Book not found for rollback.' };
     }
 
     if (book.clerkId !== userId) {
@@ -249,11 +285,12 @@ export const rollbackBookCreation = async (
     }
 
     await BookSegment.deleteMany({ bookId: book._id, clerkId: userId });
+    await PendingUpload.deleteMany({ clerkId: userId, blobKey: { $in: [book.fileBlobKey, book.coverBlobKey].filter(Boolean) } });
     await Book.findByIdAndDelete(book._id);
 
     await deleteBlobs([
-      fileBlobKey ?? book.fileBlobKey,
-      coverBlobKey ?? book.coverBlobKey ?? '',
+      book.fileBlobKey,
+      book.coverBlobKey ?? '',
     ]);
 
     return { success: true };
@@ -276,7 +313,29 @@ export const cleanupUploadedBlobs = async (blobKeys: string[]) => {
       return { success: false, error: 'Unauthorized' };
     }
 
-    await deleteBlobs(blobKeys);
+    const normalizedBlobKeys = [...new Set(blobKeys.filter((key) => typeof key === 'string' && key.length > 0))];
+
+    if (normalizedBlobKeys.length === 0) {
+      return { success: true };
+    }
+
+    const pendingUploads = await PendingUpload.find({
+      clerkId: userId,
+      blobKey: { $in: normalizedBlobKeys },
+    })
+      .select('blobKey')
+      .lean();
+
+    const verifiedBlobKeys = pendingUploads
+      .map((upload) => upload.blobKey)
+      .filter((key): key is string => typeof key === 'string' && key.length > 0);
+
+    if (verifiedBlobKeys.length !== normalizedBlobKeys.length) {
+      return { success: false, error: 'Unauthorized blob cleanup request.' };
+    }
+
+    await deleteBlobs(verifiedBlobKeys);
+    await PendingUpload.deleteMany({ clerkId: userId, blobKey: { $in: verifiedBlobKeys } });
 
     return { success: true };
   } catch (e) {

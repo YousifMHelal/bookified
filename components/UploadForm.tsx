@@ -28,6 +28,7 @@ import {
   cleanupUploadedBlobs,
   checkBookExists,
   createBook,
+  registerPendingUpload,
   rollbackBookCreation,
   saveBookSegmentsChunk,
 } from "@/lib/actions/book.action";
@@ -100,6 +101,16 @@ const UploadForm = () => {
       });
       uploadedPdfBlobKey = uploadedPdfBlob.pathname;
 
+      const pendingPdfRegistration = await registerPendingUpload(
+        uploadedPdfBlob.pathname,
+      );
+      if (!pendingPdfRegistration.success) {
+        throw new Error(
+          pendingPdfRegistration.error?.toString() ||
+            "Failed to register uploaded PDF for cleanup.",
+        );
+      }
+
       let coverUrl: string;
 
       if (data.coverImage) {
@@ -114,6 +125,15 @@ const UploadForm = () => {
           },
         );
         uploadedCoverBlobKey = uploadedCoverBlob.pathname;
+        const pendingCoverRegistration = await registerPendingUpload(
+          uploadedCoverBlob.pathname,
+        );
+        if (!pendingCoverRegistration.success) {
+          throw new Error(
+            pendingCoverRegistration.error?.toString() ||
+              "Failed to register uploaded cover for cleanup.",
+          );
+        }
         coverUrl = uploadedCoverBlob.url;
       } else {
         const response = await fetch(parsedPDF.cover);
@@ -125,6 +145,15 @@ const UploadForm = () => {
           contentType: "image/png",
         });
         uploadedCoverBlobKey = uploadedCoverBlob.pathname;
+        const pendingCoverRegistration = await registerPendingUpload(
+          uploadedCoverBlob.pathname,
+        );
+        if (!pendingCoverRegistration.success) {
+          throw new Error(
+            pendingCoverRegistration.error?.toString() ||
+              "Failed to register generated cover for cleanup.",
+          );
+        }
         coverUrl = uploadedCoverBlob.url;
       }
 
@@ -143,11 +172,17 @@ const UploadForm = () => {
       if (!book.success) {
         handledToast = true;
         toast.error((book.error as string) || "Failed to create book");
-        await cleanupUploadedBlobs(
+        const cleanupResult = await cleanupUploadedBlobs(
           [uploadedPdfBlobKey, uploadedCoverBlobKey].filter(
             (key): key is string => typeof key === "string" && key.length > 0,
           ),
         );
+        if (!cleanupResult.success) {
+          throw new Error(
+            cleanupResult.error?.toString() ||
+              "Failed to cleanup uploaded blobs after createBook failure.",
+          );
+        }
         if (book.isBillingError) {
           router.push("/subscriptions");
         }
@@ -157,11 +192,17 @@ const UploadForm = () => {
       if (book.alreadyExists) {
         handledToast = true;
         toast.info("Book with same title already exists.");
-        await cleanupUploadedBlobs(
+        const cleanupResult = await cleanupUploadedBlobs(
           [uploadedPdfBlobKey, uploadedCoverBlobKey].filter(
             (key): key is string => typeof key === "string" && key.length > 0,
           ),
         );
+        if (!cleanupResult.success) {
+          throw new Error(
+            cleanupResult.error?.toString() ||
+              "Failed to cleanup uploaded blobs for existing book.",
+          );
+        }
         form.reset();
         router.push(`/books/${book.data.slug}`);
         return;
@@ -183,12 +224,15 @@ const UploadForm = () => {
         if (!segments.success) {
           handledToast = true;
           toast.error("Failed to save book segments");
-          await rollbackBookCreation(
-            book.data._id,
-            uploadedPdfBlobKey || undefined,
-            uploadedCoverBlobKey || undefined,
-          );
-          rollbackPerformed = true;
+          const rollbackResult = await rollbackBookCreation(book.data._id);
+          if (rollbackResult.success) {
+            rollbackPerformed = true;
+          } else {
+            throw new Error(
+              rollbackResult.error?.toString() ||
+                "Failed to rollback book after segment save failure.",
+            );
+          }
           throw new Error("Failed to save book segments");
         }
       }
@@ -199,19 +243,29 @@ const UploadForm = () => {
       console.error(error);
 
       if (createdBookId && !rollbackPerformed) {
-        await rollbackBookCreation(
-          createdBookId,
-          uploadedPdfBlobKey || undefined,
-          uploadedCoverBlobKey || undefined,
-        );
+        const rollbackResult = await rollbackBookCreation(createdBookId);
+        if (rollbackResult.success) {
+          rollbackPerformed = true;
+        } else {
+          console.error(
+            "Rollback failed after upload error",
+            rollbackResult.error,
+          );
+        }
       }
 
       if (!createdBookId) {
-        await cleanupUploadedBlobs(
+        const cleanupResult = await cleanupUploadedBlobs(
           [uploadedPdfBlobKey, uploadedCoverBlobKey].filter(
             (key): key is string => typeof key === "string" && key.length > 0,
           ),
         );
+        if (!cleanupResult.success) {
+          console.error(
+            "Blob cleanup failed after upload error",
+            cleanupResult.error,
+          );
+        }
       }
 
       if (!handledToast) {

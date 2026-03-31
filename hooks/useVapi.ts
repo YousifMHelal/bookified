@@ -108,8 +108,16 @@ export function useVapi(book: IBook) {
         setCurrentUserMessage('');
         startDurationTimer();
 
-        if (sessionIdRef.current) {
-          markVoiceSessionStarted(sessionIdRef.current).then((result) => {
+        const activeSessionId = sessionIdRef.current;
+        if (activeSessionId) {
+          markVoiceSessionStarted(activeSessionId).then((result) => {
+            const sessionChanged = sessionIdRef.current !== activeSessionId;
+            const sessionNoLongerActive = isStoppingRef.current || !sessionIdRef.current;
+
+            if (sessionChanged || sessionNoLongerActive) {
+              return;
+            }
+
             if (!result.success) {
               setLimitError(result.error || 'Failed to start voice session. Please try again.');
               setStatus('idle');
@@ -291,7 +299,9 @@ export function useVapi(book: IBook) {
       sessionIdRef.current = result.sessionId || null;
 
       if (result.maxSessionMinutes) {
-        setSessionMaxDurationSeconds(result.maxSessionMinutes * SECONDS_PER_MINUTE);
+        const maxDurationFromServer = result.maxSessionMinutes * SECONDS_PER_MINUTE;
+        maxDurationRef.current = maxDurationFromServer;
+        setSessionMaxDurationSeconds(maxDurationFromServer);
       }
 
       const firstMessage = `Hey, good to meet you. Quick question before we dive in - have you actually read ${book.title} yet, or are we starting fresh?`;

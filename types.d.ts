@@ -51,6 +51,13 @@ export interface IVoiceSession extends Document {
   updatedAt: Date;
 }
 
+export interface IPendingUpload extends Document {
+  clerkId: string;
+  blobKey: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ============================================
 // FORM & INPUT TYPES
 // ============================================
