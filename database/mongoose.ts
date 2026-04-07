@@ -37,7 +37,6 @@ const configureMongoDnsServers = () => {
 };
 
 export const connectToDatabase = async () => {
-  console.log('MONGODB_URI loaded:', !!process.env.MONGODB_URI);
   configureMongoDnsServers();
   if (cached.conn) return cached.conn;
 

@@ -125,7 +125,7 @@ NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/
 Bookified_READ_WRITE_TOKEN=
 
 # MongoDB
-MONGODB_URI=mongodb:
+MONGODB_URI=mongodb+srv://<user>:<url-encoded-password>@<cluster-host>/?appName=Cluster0
 
 # Vapi (Voice AI)
 NEXT_PUBLIC_VAPI_API_KEY=
